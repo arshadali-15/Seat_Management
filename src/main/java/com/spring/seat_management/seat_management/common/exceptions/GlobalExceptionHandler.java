@@ -33,6 +33,13 @@ public class GlobalExceptionHandler {
                 body(ErrorResponse.of(exception.getErrorCode(), exception.getMessage()));
     }
 
+
+    @ExceptionHandler(BookingConflictException.class)
+    public ResponseEntity<ErrorResponse> handleBookingConflictException(BookingConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).
+                body(ErrorResponse.of(exception.getErrorCode(), exception.getMessage()));
+    }
+
 //    // ✅ Catches expired JWT
 //    @ExceptionHandler(ExpiredJwtException.class)
 //    public ResponseEntity<ErrorResponse> handleExpiredJwt(

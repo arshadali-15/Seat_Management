@@ -10,8 +10,6 @@ public interface DeskAvailabilityProjection {
 
     Boolean getIsActive();
 
-    String getType();
-
     String getStatus();
 
     String getBookedBy();

@@ -19,13 +19,12 @@ public interface BookingRepo extends JpaRepository<Booking, UUID> {
             FROM Booking b
             WHERE b.desk.deskId = :deskId
               AND b.status = :status
-              AND b.bookingFromDate <= :requestedToDate
-              AND b.bookingToDate >= :requestedFromDate
+              AND b.bookingFromDate <= :date
+              AND b.bookingToDate >= :date
             """)
-    boolean existsOverlappingDeskBooking(
+    boolean existsDeskBookingOnDate(
             @Param("deskId") UUID deskId,
-            @Param("requestedFromDate") LocalDate requestedFromDate,
-            @Param("requestedToDate") LocalDate requestedToDate,
+            @Param("date") LocalDate date,
             @Param("status") BookingStatus status
     );
 
@@ -34,13 +33,12 @@ public interface BookingRepo extends JpaRepository<Booking, UUID> {
             FROM Booking b
             WHERE b.user.userId = :userId
               AND b.status = :status
-              AND b.bookingFromDate <= :requestedToDate
-              AND b.bookingToDate >= :requestedFromDate
+              AND b.bookingFromDate <= :date
+              AND b.bookingToDate >= :date
             """)
-    boolean existsOverlappingUserBooking(
+    boolean existsUserBookingOnDate(
             @Param("userId") UUID userId,
-            @Param("requestedFromDate") LocalDate requestedFromDate,
-            @Param("requestedToDate") LocalDate requestedToDate,
+            @Param("date") LocalDate date,
             @Param("status") BookingStatus status
     );
 

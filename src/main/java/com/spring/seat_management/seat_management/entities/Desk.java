@@ -1,5 +1,6 @@
 package com.spring.seat_management.seat_management.entities;
 
+import com.spring.seat_management.seat_management.common.enums.DeskStatus;
 import com.spring.seat_management.seat_management.common.enums.DeskType;
 import com.spring.seat_management.seat_management.common.enums.Section;
 import jakarta.persistence.*;
@@ -28,4 +29,8 @@ public class Desk {
 
     @Column(nullable = false)
     private Boolean isActive = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DeskStatus status = DeskStatus.AVAILABLE;
 }

@@ -1,11 +1,8 @@
 package com.spring.seat_management.seat_management.repo;
 
 
-import com.spring.seat_management.seat_management.dto.response.UserLoginRes;
 import com.spring.seat_management.seat_management.entities.User;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -14,11 +11,9 @@ import java.util.UUID;
 
 @Repository
 public interface UserRepo extends JpaRepository<User, UUID> {
-    Optional<User> findByEmail(String email);
+    Optional<User> findByEmail(@Valid String email);
 
-    Optional<User> findBySlsId(String slsId);
+    boolean existsByEmail(@Valid String email);
 
-    boolean existsByEmail(String email);
-
-    boolean existsBySlsId(String slsId);
+    boolean existsBySlsId(@Valid String slsId);
 }

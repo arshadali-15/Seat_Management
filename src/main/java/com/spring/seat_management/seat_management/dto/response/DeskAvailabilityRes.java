@@ -9,7 +9,6 @@ public record DeskAvailabilityRes(
         UUID deskId,
         Integer deskNumber,
         Boolean isActive,
-        DeskType type,
         String status,
         String bookedBy,
         LocalDate bookingFromDate,

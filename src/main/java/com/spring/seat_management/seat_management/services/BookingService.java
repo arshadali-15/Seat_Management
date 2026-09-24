@@ -2,6 +2,8 @@ package com.spring.seat_management.seat_management.services;
 
 import com.spring.seat_management.seat_management.common.config.security.UserContext;
 import com.spring.seat_management.seat_management.common.enums.BookingStatus;
+import com.spring.seat_management.seat_management.common.enums.DeskStatus;
+import com.spring.seat_management.seat_management.common.exceptions.BookingConflictException;
 import com.spring.seat_management.seat_management.common.exceptions.DuplicateResourceException;
 import com.spring.seat_management.seat_management.common.exceptions.ResourceNotFoundException;
 import com.spring.seat_management.seat_management.dto.request.BookingReq;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +35,7 @@ public class BookingService {
     @Transactional
     public BookingRes bookDesk(BookingReq request) {
 
+        // 1. Get logged-in user
         User user = userRepo.findById(userContext.getUserId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
@@ -40,6 +44,7 @@ public class BookingService {
                         )
                 );
 
+        // 2. Get desk
         Desk desk = deskRepo.findById(request.deskId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
@@ -48,7 +53,7 @@ public class BookingService {
                         )
                 );
 
-        // 1. Desk must be active
+        // 3. Desk must be active
         if (!desk.getIsActive()) {
             throw new DuplicateResourceException(
                     "DESK_NOT_ACTIVE",
@@ -56,74 +61,202 @@ public class BookingService {
             );
         }
 
-        // 2. Resolve requested date range
+        // 4. Desk must be AVAILABLE
+        if (desk.getStatus() == DeskStatus.UNAVAILABLE) {
+            throw new DuplicateResourceException(
+                    "DESK_UNAVAILABLE",
+                    "Desk " + desk.getDeskNumber()
+                            + " is currently unavailable"
+            );
+        }
+
+        // 5. Resolve requested date range
         LocalDate fromDate = request.fromDate();
 
         LocalDate toDate = request.toDate() != null
                 ? request.toDate()
                 : fromDate;
 
-        // 3. Validate date range
+        // 6. Validate date range
         if (fromDate.isAfter(toDate)) {
             throw new IllegalArgumentException(
                     "From date cannot be after to date"
             );
         }
 
-        // 4. Check whether USER already has an overlapping booking
-        boolean userAlreadyBooked =
-                bookingRepo.existsOverlappingUserBooking(
-                        userContext.getUserId(),
-                        fromDate,
-                        toDate,
-                        BookingStatus.BOOKED
+        List<LocalDate> bookedDates = new ArrayList<>();
+        List<BookingRes.SkippedDate> skippedDates = new ArrayList<>();
+        List<BookingRes.BookingRange> bookingRanges = new ArrayList<>();
+
+        LocalDate rangeStart = null;
+        LocalDate previousBookedDate = null;
+
+        LocalDate currentDate = fromDate;
+
+        while (!currentDate.isAfter(toDate)) {
+
+            // 7. Check whether desk is already booked on this date
+            boolean deskAlreadyBooked =
+                    bookingRepo.existsDeskBookingOnDate(
+                            request.deskId(),
+                            currentDate,
+                            BookingStatus.BOOKED
+                    );
+
+            if (deskAlreadyBooked) {
+
+                // Close current consecutive range
+                if (rangeStart != null) {
+
+                    Booking booking = createBooking(
+                            user,
+                            desk,
+                            rangeStart,
+                            previousBookedDate
+                    );
+
+                    Booking savedBooking = bookingRepo.save(booking);
+
+                    bookingRanges.add(
+                            new BookingRes.BookingRange(
+                                    savedBooking.getBookingId(),
+                                    savedBooking.getBookingFromDate(),
+                                    savedBooking.getBookingToDate()
+                            )
+                    );
+
+                    rangeStart = null;
+                    previousBookedDate = null;
+                }
+
+                skippedDates.add(
+                        new BookingRes.SkippedDate(
+                                currentDate,
+                                "Desk already booked"
+                        )
                 );
 
-        if (userAlreadyBooked) {
-            throw new DuplicateResourceException(
-                    "USER_BOOKING_OVERLAP",
-                    "You already have a booking that overlaps with the requested date range"
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+
+            // 8. Check whether USER already has a booking on this date
+            boolean userAlreadyBooked =
+                    bookingRepo.existsUserBookingOnDate(
+                            userContext.getUserId(),
+                            currentDate,
+                            BookingStatus.BOOKED
+                    );
+
+            if (userAlreadyBooked) {
+
+                // Close current consecutive range
+                if (rangeStart != null) {
+
+                    Booking booking = createBooking(
+                            user,
+                            desk,
+                            rangeStart,
+                            previousBookedDate
+                    );
+
+                    Booking savedBooking = bookingRepo.save(booking);
+
+                    bookingRanges.add(
+                            new BookingRes.BookingRange(
+                                    savedBooking.getBookingId(),
+                                    savedBooking.getBookingFromDate(),
+                                    savedBooking.getBookingToDate()
+                            )
+                    );
+
+                    rangeStart = null;
+                    previousBookedDate = null;
+                }
+
+                skippedDates.add(
+                        new BookingRes.SkippedDate(
+                                currentDate,
+                                "You already have a booking"
+                        )
+                );
+
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+
+            // 9. Date is available → add it to current range
+            bookedDates.add(currentDate);
+
+            if (rangeStart == null) {
+                rangeStart = currentDate;
+            }
+
+            previousBookedDate = currentDate;
+
+            currentDate = currentDate.plusDays(1);
+        }
+
+        // 10. Save final consecutive range
+        if (rangeStart != null) {
+
+            Booking booking = createBooking(
+                    user,
+                    desk,
+                    rangeStart,
+                    previousBookedDate
+            );
+
+            Booking savedBooking = bookingRepo.save(booking);
+
+            bookingRanges.add(
+                    new BookingRes.BookingRange(
+                            savedBooking.getBookingId(),
+                            savedBooking.getBookingFromDate(),
+                            savedBooking.getBookingToDate()
+                    )
             );
         }
 
-        // 5. Check whether DESK already has an overlapping booking
-        boolean deskAlreadyBooked =
-                bookingRepo.existsOverlappingDeskBooking(
-                        request.deskId(),
-                        fromDate,
-                        toDate,
-                        BookingStatus.BOOKED
-                );
+        // 11. If nothing was booked, return the skipped result
+        if (bookedDates.isEmpty()) {
 
-        if (deskAlreadyBooked) {
-            throw new DuplicateResourceException(
-                    "DESK_BOOKING_OVERLAP",
-                    "Desk " + desk.getDeskNumber()
-                            + " is already booked for part of the requested date range"
+            String reasons = skippedDates.stream()
+                    .map(BookingRes.SkippedDate::reason)
+                    .distinct()
+                    .reduce((first, second) -> first + ", " + second)
+                    .orElse("No dates were available for booking");
+
+            throw new BookingConflictException(
+                    "BOOKING_CONFLICTS",
+                    "No dates were booked. " + reasons
             );
         }
 
-        // 6. Create ONE booking for the complete requested range
-        Booking booking = Booking.builder()
+        // 12. Return booking result
+        return BookingRes.builder()
+                .deskNumber(desk.getDeskNumber())
+                .status(BookingStatus.BOOKED)
+                .createdAt(null)
+                .bookings(bookingRanges)
+                .bookedDates(bookedDates)
+                .skippedDates(skippedDates)
+                .build();
+    }
+
+    private Booking createBooking(
+            User user,
+            Desk desk,
+            LocalDate fromDate,
+            LocalDate toDate
+    ) {
+
+        return Booking.builder()
                 .user(user)
                 .desk(desk)
                 .bookingFromDate(fromDate)
                 .bookingToDate(toDate)
                 .status(BookingStatus.BOOKED)
-                .build();
-
-        // 7. Save booking
-        Booking savedBooking = bookingRepo.save(booking);
-
-        // 8. Return the actual saved booking
-        return BookingRes.builder()
-                .bookingId(savedBooking.getBookingId())
-                .deskNumber(desk.getDeskNumber())
-                .bookedBy(user.getName())
-                .status(savedBooking.getStatus())
-                .createdAt(savedBooking.getCreatedAt())
-                .bookingFromDate(savedBooking.getBookingFromDate())
-                .bookingToDate(savedBooking.getBookingToDate())
                 .build();
     }
 
@@ -137,16 +270,49 @@ public class BookingService {
                 );
 
         return bookings.stream()
-                .map(booking -> BookingRes.builder()
-                        .bookingId(booking.getBookingId())
-                        .deskNumber(booking.getDesk().getDeskNumber())
-                        .bookedBy(booking.getUser().getName())
-                        .status(booking.getStatus())
-                        .createdAt(booking.getCreatedAt())
-                        .bookingFromDate(booking.getBookingFromDate())
-                        .bookingToDate(booking.getBookingToDate())
-                        .build())
+                .map(booking ->
+                        BookingRes.builder()
+                                .deskNumber(
+                                        booking.getDesk().getDeskNumber()
+                                )
+                                .status(booking.getStatus())
+                                .createdAt(booking.getCreatedAt())
+                                .bookings(
+                                        List.of(
+                                                new BookingRes.BookingRange(
+                                                        booking.getBookingId(),
+                                                        booking.getBookingFromDate(),
+                                                        booking.getBookingToDate()
+                                                )
+                                        )
+                                )
+                                .bookedDates(
+                                        getDatesBetween(
+                                                booking.getBookingFromDate(),
+                                                booking.getBookingToDate()
+                                        )
+                                )
+                                .skippedDates(List.of())
+                                .build()
+                )
                 .toList();
+    }
+
+    private List<LocalDate> getDatesBetween(
+            LocalDate fromDate,
+            LocalDate toDate
+    ) {
+
+        List<LocalDate> dates = new ArrayList<>();
+
+        LocalDate current = fromDate;
+
+        while (!current.isAfter(toDate)) {
+            dates.add(current);
+            current = current.plusDays(1);
+        }
+
+        return dates;
     }
 
     @Transactional

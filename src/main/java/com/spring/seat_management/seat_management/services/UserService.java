@@ -34,7 +34,6 @@ public class UserService {
 
     public UserLoginRes login(UserLoginReq request) {
 
-        log.info(passwordEncoder.encode(request.password()));
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
@@ -51,11 +50,23 @@ public class UserService {
     @Transactional
     public UserSignupRes addUser(UserSignupReq request) {
         if (userRepo.existsByEmail(request.email())) {
-            throw new DuplicateResourceException("EMAIL_EXISTS", "Email already exists with email: " + request.email());
+            throw new DuplicateResourceException(
+                    "EMAIL_EXISTS",
+                    "Email already exists with email: " + request.email()
+            );
+        }
+
+        if (userRepo.existsBySlsId(request.SLSID())) {
+            throw new DuplicateResourceException(
+                    "SLSID_EXISTS",
+                    "SLS ID already exists: " + request.SLSID()
+            );
         }
 
         User appUser = User.builder()
+                .name(request.name())
                 .email(request.email())
+                .slsId(request.SLSID())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(Role.EMPLOYEE)
                 .build();
