@@ -1,0 +1,28 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: seat_management
+  datasource:
+    url: jdbc:postgresql://localhost:5432/seatmanagement
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+    security:
+      ignored: /api/v1/auth/**
+
+jwt:
+  secret: a9asd7fulasjdfaklsdfu98q3uhjdiosh897as9d8f7ua9osufdjilasdjf
+
+logging:
+  level:
+    com.spring.seat_management: DEBUG
