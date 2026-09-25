@@ -1,8 +1,10 @@
 package com.spring.seat_management.seat_management.services;
 
+import com.spring.seat_management.seat_management.common.cache.DeskAvailabilityCache;
 import com.spring.seat_management.seat_management.common.config.security.UserContext;
 import com.spring.seat_management.seat_management.common.enums.BookingStatus;
 import com.spring.seat_management.seat_management.common.enums.DeskStatus;
+import com.spring.seat_management.seat_management.common.exceptions.BadRequestException;
 import com.spring.seat_management.seat_management.common.exceptions.BookingConflictException;
 import com.spring.seat_management.seat_management.common.exceptions.DuplicateResourceException;
 import com.spring.seat_management.seat_management.common.exceptions.ResourceNotFoundException;
@@ -31,6 +33,8 @@ public class BookingService {
     private final UserRepo userRepo;
     private final DeskRepo deskRepo;
     private final UserContext userContext;
+    private final DeskAvailabilityCache deskAvailabilityCache;
+
 
     @Transactional
     public BookingRes bookDesk(BookingReq request) {
@@ -55,7 +59,7 @@ public class BookingService {
 
         // 3. Desk must be active
         if (!desk.getIsActive()) {
-            throw new DuplicateResourceException(
+            throw new BadRequestException(
                     "DESK_NOT_ACTIVE",
                     "Desk is not active for booking"
             );
@@ -63,7 +67,7 @@ public class BookingService {
 
         // 4. Desk must be AVAILABLE
         if (desk.getStatus() == DeskStatus.UNAVAILABLE) {
-            throw new DuplicateResourceException(
+            throw new BadRequestException(
                     "DESK_UNAVAILABLE",
                     "Desk " + desk.getDeskNumber()
                             + " is currently unavailable"
@@ -116,6 +120,12 @@ public class BookingService {
                     );
 
                     Booking savedBooking = bookingRepo.save(booking);
+
+
+                    // Evict each // Evict each date in this range
+                    rangeStart.datesUntil(previousBookedDate.plusDays(1))
+                            .forEach(deskAvailabilityCache::evict);
+
 
                     bookingRanges.add(
                             new BookingRes.BookingRange(
@@ -233,6 +243,8 @@ public class BookingService {
             );
         }
 
+        bookedDates.forEach(deskAvailabilityCache::evict);
+
         // 12. Return booking result
         return BookingRes.builder()
                 .deskNumber(desk.getDeskNumber())
@@ -303,16 +315,17 @@ public class BookingService {
             LocalDate toDate
     ) {
 
-        List<LocalDate> dates = new ArrayList<>();
-
-        LocalDate current = fromDate;
-
-        while (!current.isAfter(toDate)) {
-            dates.add(current);
-            current = current.plusDays(1);
-        }
-
-        return dates;
+//        List<LocalDate> dates = new ArrayList<>();
+//
+//        LocalDate current = fromDate;
+//
+//        while (!current.isAfter(toDate)) {
+//            dates.add(current);
+//            current = current.plusDays(1);
+//        }
+//
+//        return dates;
+        return fromDate.datesUntil(toDate.plusDays(1)).toList();
     }
 
     @Transactional
@@ -335,5 +348,9 @@ public class BookingService {
 
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepo.save(booking);
+
+        booking.getBookingFromDate()
+                .datesUntil(booking.getBookingToDate().plusDays(1))
+                .forEach(deskAvailabilityCache::evict);
     }
 }

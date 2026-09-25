@@ -18,7 +18,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
     security:
-      ignored: /api/v1/auth/**
+      ignored: /v1/users/auth/**
 
 jwt:
   secret: a9asd7fulasjdfaklsdfu98q3uhjdiosh897as9d8f7ua9osufdjilasdjf

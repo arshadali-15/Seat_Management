@@ -40,6 +40,12 @@ public class GlobalExceptionHandler {
                 body(ErrorResponse.of(exception.getErrorCode(), exception.getMessage()));
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequestException(BadRequestException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).
+                body(ErrorResponse.of(exception.getErrorCode(), exception.getMessage()));
+    }
+
 //    // ✅ Catches expired JWT
 //    @ExceptionHandler(ExpiredJwtException.class)
 //    public ResponseEntity<ErrorResponse> handleExpiredJwt(

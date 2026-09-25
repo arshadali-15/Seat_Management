@@ -16,7 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Booking {
+public class Booking extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -40,6 +40,4 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 }

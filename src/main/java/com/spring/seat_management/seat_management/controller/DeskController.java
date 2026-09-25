@@ -1,5 +1,6 @@
 package com.spring.seat_management.seat_management.controller;
 
+import com.spring.seat_management.seat_management.common.enums.DeskStatus;
 import com.spring.seat_management.seat_management.common.enums.Section;
 import com.spring.seat_management.seat_management.dto.response.BookingRes;
 import com.spring.seat_management.seat_management.dto.response.DeskAvailabilityProjection;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,8 +38,37 @@ public class DeskController {
     }
 
     @GetMapping("/{section}")
-    public ResponseEntity<List<Desk>> getAllDesksBySection(@PathVariable Section section) {
-        return ResponseEntity.ok(deskService.getAllDesksBySection(section));
+    public ResponseEntity<List<DeskAvailabilityRes>> getDesksBySection(
+            @PathVariable Section section,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate date
+    ) {
+        LocalDate bookingDate = date != null ? date : LocalDate.now();
+
+        return ResponseEntity.ok(
+                deskService.getDesksBySection(section, bookingDate)
+        );
     }
+
+    @PatchMapping("/{deskId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> updateDeskStatus(
+            @PathVariable UUID deskId,
+            @RequestParam DeskStatus status) {
+        deskService.updateStatus(deskId, status);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ✅ Admin — toggle maintenance (permanent deactivation)
+    @PatchMapping("/{deskId}/active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> setActiveStatus(
+            @PathVariable UUID deskId,
+            @RequestParam boolean isActive) {
+        deskService.setActiveStatus(deskId, isActive);
+        return ResponseEntity.noContent().build();
+    }
+
 
 }
