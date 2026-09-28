@@ -46,24 +46,24 @@ public class GlobalExceptionHandler {
                 body(ErrorResponse.of(exception.getErrorCode(), exception.getMessage()));
     }
 
-//    // ✅ Catches expired JWT
-//    @ExceptionHandler(ExpiredJwtException.class)
-//    public ResponseEntity<ErrorResponse> handleExpiredJwt(
-//            ExpiredJwtException ex) {
-//        return ResponseEntity
-//                .status(HttpStatus.UNAUTHORIZED)
-//                .body(ErrorResponse.of("SESSION_EXPIRED", "Your session has expired. Please login again."));
-//    }
-//
-//    // ✅ Catches invalid/malformed JWT
-//    @ExceptionHandler(JwtException.class)
-//    public ResponseEntity<ErrorResponse> handleInvalidJwt(
-//            JwtException ex) {
-//        return ResponseEntity
-//                .status(HttpStatus.UNAUTHORIZED)
-//                .body(ErrorResponse.of(
-//                        "INVALID_TOKEN",
-//                        "Invalid token. Please login again."
-//                ));
-//    }
+    // ✅ Catches expired JWT
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredJwt(
+            ExpiredJwtException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of("SESSION_EXPIRED", "Your session has expired. Please login again."));
+    }
+
+    // ✅ Catches invalid/malformed JWT
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidJwt(
+            JwtException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of(
+                        "INVALID_TOKEN",
+                        "Invalid token. Please login again."
+                ));
+    }
 }

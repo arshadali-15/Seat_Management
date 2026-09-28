@@ -4,6 +4,7 @@ import com.spring.seat_management.seat_management.common.exceptions.ResourceNotF
 import com.spring.seat_management.seat_management.dto.request.ResetPasswordReq;
 import com.spring.seat_management.seat_management.dto.request.UserLoginReq;
 import com.spring.seat_management.seat_management.dto.request.UserSignupReq;
+import com.spring.seat_management.seat_management.dto.response.AdminUserRes;
 import com.spring.seat_management.seat_management.dto.response.UserLoginRes;
 import com.spring.seat_management.seat_management.dto.response.UserSignupRes;
 import com.spring.seat_management.seat_management.entities.User;
@@ -19,14 +20,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/v1/users")
 public class UserController {
 
     private final UserService userService;
-    private PasswordEncoder passwordEncoder;
-    private final UserRepo userRepo;
 
     @PostMapping("/auth/login")
     public ResponseEntity<UserLoginRes> login(@RequestBody @Valid UserLoginReq request) {
@@ -43,17 +44,14 @@ public class UserController {
     }
 
     @PostMapping("/resetPassword")
-    @Transactional
-    public void resetPassword(
-            @RequestBody ResetPasswordReq request) {
-
-        User user = userRepo.findByEmail(request.getEmail())
-                .orElseThrow();
-        user.setPasswordHash(
-                passwordEncoder.encode(request.getPassword())
-        );
-        userRepo.save(user);
+    public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordReq request) {
+        userService.resetPassword(request);
+        return ResponseEntity.noContent().build();
     }
 
-
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AdminUserRes>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsersForAdmin());
+    }
 }

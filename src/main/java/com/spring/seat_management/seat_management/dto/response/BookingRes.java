@@ -13,19 +13,14 @@ public record BookingRes(
         Integer deskNumber,
         BookingStatus status,
         LocalDateTime createdAt,
-
-        List<BookingRange> bookings,
-
-        List<LocalDate> bookedDates,
         String bookedBy,
-
+        List<BookingDate> bookings,
         List<SkippedDate> skippedDates
 ) {
 
-    public record BookingRange(
+    public record BookingDate(
             UUID bookingId,
-            LocalDate fromDate,
-            LocalDate toDate
+            LocalDate date
     ) {
     }
 

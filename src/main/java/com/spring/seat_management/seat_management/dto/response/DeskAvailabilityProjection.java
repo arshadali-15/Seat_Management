@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public interface DeskAvailabilityProjection {
+
     UUID getDeskId();
 
     Integer getDeskNumber();
@@ -14,7 +15,5 @@ public interface DeskAvailabilityProjection {
 
     String getBookedBy();
 
-    LocalDate getBookingFromDate();
-
-    LocalDate getBookingToDate();
+    LocalDate getBookingDate();
 }

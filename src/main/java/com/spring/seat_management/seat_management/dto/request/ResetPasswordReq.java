@@ -1,24 +1,16 @@
 package com.spring.seat_management.seat_management.dto.request;
 
-import lombok.Getter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
-public class ResetPasswordReq {
+public record ResetPasswordReq(
 
-    private String email;
-    private String password;
+        @NotBlank(message = "Current password is required")
+        String currentPassword,
 
-    public String getPassword() {
-        return password;
-    }
-    public String getEmail() {
-        return email;
-    }
+        @NotBlank(message = "New password is required")
+        @Size(min = 6, max = 20, message = "Password must be between 6 and 20 characters")
+        String newPassword
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
+) {
 }

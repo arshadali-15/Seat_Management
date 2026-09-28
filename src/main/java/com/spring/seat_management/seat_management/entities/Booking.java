@@ -10,7 +10,15 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "bookings")
+@Table(
+        name = "bookings",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_booking_desk_date",
+                        columnNames = {"desk_id", "booking_date"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,11 +38,8 @@ public class Booking extends BaseEntity {
     @JoinColumn(name = "desk_id", nullable = false)
     private Desk desk;
 
-    @Column(nullable = false)
-    private LocalDate bookingFromDate;
-
-    @Column(nullable = false)
-    private LocalDate bookingToDate;
+    @Column(name = "booking_date", nullable = false)
+    private LocalDate bookingDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

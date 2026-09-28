@@ -1,6 +1,5 @@
 package com.spring.seat_management.seat_management.dto.request;
 
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
