@@ -17,6 +17,7 @@ public record BookingRes(
         List<BookingRange> bookings,
 
         List<LocalDate> bookedDates,
+        String bookedBy,
 
         List<SkippedDate> skippedDates
 ) {

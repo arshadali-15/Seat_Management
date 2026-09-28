@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -22,13 +24,14 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateAccessToken(String email, UUID userId, String role) {
+    public String generateAccessToken(String email, UUID userId, String role, String name) {
 
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(email)
                 .claim("user_id", userId.toString())
                 .claim("role", role)
+                .claim("name", name)
                 .issuedAt(java.util.Date.from(now))
                 .expiration(java.util.Date.from(now.plusSeconds(3600)))
                 .signWith(getSecretKey())
@@ -50,4 +53,11 @@ public class JwtUtil {
     public String extractUserId(Claims claims) {
         return claims.get("user_id", String.class);
     }
+
+    public String extractName(Claims claims) {
+        return claims.get("name", String.class);
+    }
+
 }
+
+

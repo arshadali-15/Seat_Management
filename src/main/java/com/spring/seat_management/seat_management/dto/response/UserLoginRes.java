@@ -4,6 +4,8 @@ import lombok.Builder;
 import lombok.Data;
 
 public record UserLoginRes(
-        String accessToken
+        String accessToken,
+        UserProfileRes user
+
 ) {
 }

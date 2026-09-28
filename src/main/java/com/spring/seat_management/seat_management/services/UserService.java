@@ -7,6 +7,7 @@ import com.spring.seat_management.seat_management.common.exceptions.ResourceNotF
 import com.spring.seat_management.seat_management.dto.request.UserLoginReq;
 import com.spring.seat_management.seat_management.dto.request.UserSignupReq;
 import com.spring.seat_management.seat_management.dto.response.UserLoginRes;
+import com.spring.seat_management.seat_management.dto.response.UserProfileRes;
 import com.spring.seat_management.seat_management.dto.response.UserSignupRes;
 import com.spring.seat_management.seat_management.entities.User;
 import com.spring.seat_management.seat_management.mapper.UserMapper;
@@ -42,9 +43,14 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", request.email()));
 
         String token = jwtUtil.generateAccessToken(
-                user.getEmail(), user.getUserId(), user.getRole().name());
+                user.getEmail(), user.getUserId(), user.getRole().name(), user.getName());
 
-        return new UserLoginRes(token);
+        return new UserLoginRes(token, new UserProfileRes(
+                user.getUserId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name()
+        ));
     }
 
     @Transactional

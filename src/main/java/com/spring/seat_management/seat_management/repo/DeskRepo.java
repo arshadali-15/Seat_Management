@@ -66,7 +66,7 @@ public interface DeskRepo extends JpaRepository<Desk, UUID> {
                         THEN 'INACTIVE'
             
                     WHEN dr.release_id IS NOT NULL
-                        THEN 'AVAILABLE'
+                        THEN dr.status
             
                     WHEN b.booking_id IS NOT NULL
                         THEN 'BOOKED'
@@ -76,19 +76,26 @@ public interface DeskRepo extends JpaRepository<Desk, UUID> {
             
                 CASE
                     WHEN dr.release_id IS NOT NULL
+                        AND dr.status = 'BOOKED'
+                        THEN dr.booked_by
+            
+                    WHEN dr.release_id IS NOT NULL
                         THEN NULL
+            
                     ELSE u.name
                 END AS bookedBy,
             
                 CASE
                     WHEN dr.release_id IS NOT NULL
-                        THEN NULL
+                        THEN dr.release_date
+            
                     ELSE b.booking_from_date
                 END AS bookingFromDate,
             
                 CASE
                     WHEN dr.release_id IS NOT NULL
-                        THEN NULL
+                        THEN dr.release_date
+            
                     ELSE b.booking_to_date
                 END AS bookingToDate
             
@@ -100,6 +107,7 @@ public interface DeskRepo extends JpaRepository<Desk, UUID> {
             
             LEFT JOIN bookings b
                    ON b.desk_id = d.desk_id
+                  AND dr.release_id IS NULL
                   AND b.booking_from_date <= :date
                   AND b.booking_to_date >= :date
                   AND b.status = 'BOOKED'

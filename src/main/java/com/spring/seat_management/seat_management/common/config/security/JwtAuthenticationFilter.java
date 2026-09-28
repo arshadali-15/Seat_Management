@@ -49,9 +49,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UUID userId = UUID.fromString(jwtUtil.extractUserId(claims));
                 String email = claims.getSubject();
                 String role = jwtUtil.extractRole(claims);
+                String name = jwtUtil.extractName(claims);
                 userContext.setUserId(userId);
                 userContext.setEmail(email);
                 userContext.setRole(role);
+                userContext.setName(name);
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
             filterChain.doFilter(request, response);

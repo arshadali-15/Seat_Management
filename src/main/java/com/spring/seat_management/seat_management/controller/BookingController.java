@@ -2,6 +2,7 @@ package com.spring.seat_management.seat_management.controller;
 
 import com.spring.seat_management.seat_management.dto.request.BookingReq;
 import com.spring.seat_management.seat_management.dto.response.BookingRes;
+import com.spring.seat_management.seat_management.dto.response.MyBookingRes;
 import com.spring.seat_management.seat_management.services.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,8 +36,15 @@ public class BookingController {
         );
     }
 
-    @DeleteMapping("/{bookingId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/myBookings")
+    public ResponseEntity<List<MyBookingRes>> getUserBookings() {
+
+        return ResponseEntity.ok(
+                bookingService.getMyBookings()
+        );
+    }
+
+    @PutMapping("/cancel/{bookingId}")
     public ResponseEntity<Void> cancelBooking(@PathVariable UUID bookingId) {
         bookingService.cancelBooking(bookingId);
         return ResponseEntity.noContent().build();

@@ -1,5 +1,6 @@
 package com.spring.seat_management.seat_management.entities;
 
+import com.spring.seat_management.seat_management.common.enums.DeskStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -34,17 +35,22 @@ public class DeskRelease extends BaseEntity {
     @JoinColumn(name = "desk_id", nullable = false)
     private Desk desk;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DeskStatus status = DeskStatus.AVAILABLE;
+
     @Column(name = "release_date", nullable = false)
     private LocalDate releaseDate;
 
     @Column(length = 255)
     private String reason;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "released_by", nullable = false)
-
     private String releasedBy;
 
     @CreationTimestamp
     private LocalDateTime releasedAt;
+
+    private String bookedBy;
+
+    private LocalDateTime bookedAt;
 }

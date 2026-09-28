@@ -7,6 +7,7 @@ import com.spring.seat_management.seat_management.common.enums.Section;
 import com.spring.seat_management.seat_management.common.exceptions.ResourceNotFoundException;
 import com.spring.seat_management.seat_management.dto.response.DeskAvailabilityRes;
 import com.spring.seat_management.seat_management.entities.Desk;
+import com.spring.seat_management.seat_management.repo.DeskReleaseRepo;
 import com.spring.seat_management.seat_management.repo.DeskRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

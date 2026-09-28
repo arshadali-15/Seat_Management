@@ -2,6 +2,7 @@ package com.spring.seat_management.seat_management.controller;
 
 import com.spring.seat_management.seat_management.common.config.security.UserContext;
 import com.spring.seat_management.seat_management.dto.request.DeskReleaseReq;
+import com.spring.seat_management.seat_management.dto.response.DeskReleaseRes;
 import com.spring.seat_management.seat_management.entities.User;
 import com.spring.seat_management.seat_management.repo.UserRepo;
 import com.spring.seat_management.seat_management.services.DeskReleaseService;
@@ -10,10 +11,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,19 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class DeskReleaseController {
 
     private final DeskReleaseService deskReleaseService;
-    private final UserContext userContext;
-    private final UserRepo userRepo;
 
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> releaseDesk(
-            @RequestBody @Valid DeskReleaseReq request
-    ) {
-        deskReleaseService.releaseDesk(
-                request.deskId(),
-                request.releaseDate(),
-                request.reason()
-        );
-        return ResponseEntity.ok().build();
+    @PutMapping("/release/{deskId}")
+    public ResponseEntity<DeskReleaseRes> releaseDesk(@PathVariable UUID deskId,
+                                                      @RequestParam LocalDate date) {
+        return ResponseEntity.ok(deskReleaseService.releaseDesk(deskId, date, "DESK RELEASED"));
     }
 }

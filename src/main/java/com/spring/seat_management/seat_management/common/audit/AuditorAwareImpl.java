@@ -17,11 +17,8 @@ public class AuditorAwareImpl implements AuditorAware<String> {
     public Optional<String> getCurrentAuditor() {
 
         try {
-            String keyId = userContext.getKeyId();
-            if (keyId != null && !keyId.isBlank()) return Optional.of(keyId);
-
             if (userContext.getUserId() != null) {
-                return Optional.of("user_id: " + userContext.getUserId());
+                return Optional.of(userContext.getEmail());
             }
         } catch (Exception ignored) {
         }

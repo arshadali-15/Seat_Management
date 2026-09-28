@@ -43,9 +43,10 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/v1/users/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/v1/desks/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/v1/users/").hasRole("ADMIN")
+                        .requestMatchers("/v1/users/auth/**").permitAll()
+                        .requestMatchers("/v1/desk-releases/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/v1/desks/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/v1/users/addUser").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

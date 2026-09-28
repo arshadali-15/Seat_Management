@@ -1,6 +1,7 @@
 package com.spring.seat_management.seat_management.repo;
 
 import com.spring.seat_management.seat_management.common.enums.BookingStatus;
+import com.spring.seat_management.seat_management.dto.response.BookingRes;
 import com.spring.seat_management.seat_management.entities.Booking;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -8,21 +9,23 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface BookingRepo extends JpaRepository<Booking, UUID> {
 
     @Query("""
-            SELECT COUNT(b) > 0
+            SELECT b
             FROM Booking b
             WHERE b.desk.deskId = :deskId
               AND b.status = :status
               AND b.bookingFromDate <= :date
               AND b.bookingToDate >= :date
             """)
-    boolean existsDeskBookingOnDate(
+    Optional<Booking> findBookingOnDate(
             @Param("deskId") UUID deskId,
             @Param("date") LocalDate date,
             @Param("status") BookingStatus status
@@ -51,6 +54,26 @@ public interface BookingRepo extends JpaRepository<Booking, UUID> {
             """)
     List<Booking> findByDeskIdAndStatus(
             @Param("deskId") UUID deskId,
+            @Param("status") BookingStatus status
+    );
+
+    List<Booking> findByUser_UserId(@Param("userId") UUID userId);
+
+    Optional<Booking> findByBookingId(UUID bookingId);
+
+    @Query("""
+            SELECT b
+            FROM Booking b
+            WHERE b.desk.deskId = :deskId
+              AND b.user.userId = :userId
+              AND b.status = :status
+              AND b.bookingFromDate <= :date
+              AND b.bookingToDate >= :date
+            """)
+    Optional<Booking> findUserBookingOnDate(
+            @Param("deskId") UUID deskId,
+            @Param("userId") UUID userId,
+            @Param("date") LocalDate date,
             @Param("status") BookingStatus status
     );
 }

@@ -18,7 +18,7 @@ import java.util.UUID;
 public class UserContext {
 
     private UUID userId;
-    private String keyId;
     private String email;
+    private String name;
     private String role;
 }

@@ -43,18 +43,15 @@ public class UserController {
     }
 
     @PostMapping("/resetPassword")
-    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    public void resetAdminPassword(
+    public void resetPassword(
             @RequestBody ResetPasswordReq request) {
 
         User user = userRepo.findByEmail(request.getEmail())
                 .orElseThrow();
-
         user.setPasswordHash(
                 passwordEncoder.encode(request.getPassword())
         );
-
         userRepo.save(user);
     }
 
