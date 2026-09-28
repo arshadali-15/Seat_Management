@@ -1,14 +1,19 @@
 server:
   port: 8080
 spring:
+  docker:
+    compose:
+      enabled: false
   application:
     name: seat_management
+
   datasource:
     url: jdbc:postgresql://localhost:5432/seatmanagement
     username: postgres
     password: postgres
 
-  jpa:
+
+    jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -17,8 +22,6 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-    security:
-      ignored: /v1/users/auth/**
 
 jwt:
   secret: a9asd7fulasjdfaklsdfu98q3uhjdiosh897as9d8f7ua9osufdjilasdjf
