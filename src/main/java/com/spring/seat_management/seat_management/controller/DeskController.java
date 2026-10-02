@@ -56,7 +56,7 @@ public class DeskController {
     }
 
     // ✅ Admin — toggle maintenance (permanent deactivation)
-    @PatchMapping("/{deskId}/active")
+    @PatchMapping("/status/{deskId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> setActiveStatus(
             @PathVariable UUID deskId,

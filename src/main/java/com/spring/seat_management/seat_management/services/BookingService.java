@@ -4,6 +4,7 @@ import com.spring.seat_management.seat_management.common.cache.DeskAvailabilityC
 import com.spring.seat_management.seat_management.common.config.security.UserContext;
 import com.spring.seat_management.seat_management.common.enums.BookingStatus;
 import com.spring.seat_management.seat_management.common.enums.DeskStatus;
+import com.spring.seat_management.seat_management.common.enums.Role;
 import com.spring.seat_management.seat_management.common.exceptions.BadRequestException;
 import com.spring.seat_management.seat_management.common.exceptions.BookingConflictException;
 import com.spring.seat_management.seat_management.common.exceptions.ResourceNotFoundException;
@@ -11,6 +12,7 @@ import com.spring.seat_management.seat_management.dto.request.BookingReq;
 import com.spring.seat_management.seat_management.dto.response.BookingRes;
 import com.spring.seat_management.seat_management.dto.response.MyBookingRes;
 import com.spring.seat_management.seat_management.entities.Booking;
+import com.spring.seat_management.seat_management.entities.BookingDateResult;
 import com.spring.seat_management.seat_management.entities.Desk;
 import com.spring.seat_management.seat_management.entities.User;
 import com.spring.seat_management.seat_management.repo.BookingRepo;
@@ -25,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -36,26 +39,28 @@ public class BookingService {
     private final DeskRepo deskRepo;
     private final UserContext userContext;
     private final DeskAvailabilityCache deskAvailabilityCache;
+    private final BookingDateService bookingDateService;
 
-    @Transactional
+    @Transactional(readOnly = true)
     public BookingRes bookDesk(BookingReq request) {
 
-        User user = userRepo.findById(userContext.getUserId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "USER_NOT_FOUND",
-                                userContext.getUserId().toString()
-                        )
-                );
+        UUID userId = userContext.getUserId();
+
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "USER_NOT_FOUND",
+                        userId.toString()
+                ));
 
         Desk desk = deskRepo.findById(request.deskId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "DESK_NOT_FOUND",
-                                request.deskId().toString()
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "DESK_NOT_FOUND",
+                        request.deskId().toString()
+                ));
 
+        /*
+         * Validate desk.
+         */
         if (!desk.getIsActive()) {
             throw new BadRequestException(
                     "DESK_NOT_ACTIVE",
@@ -71,12 +76,20 @@ public class BookingService {
             );
         }
 
+        /*
+         * Resolve date range.
+         *
+         * If toDate is null, only fromDate is booked.
+         */
         LocalDate fromDate = request.fromDate();
+
         LocalDate toDate = request.toDate() != null
                 ? request.toDate()
                 : fromDate;
 
-        // Past date
+        /*
+         * Validate dates.
+         */
         if (fromDate.isBefore(LocalDate.now())) {
             throw new BadRequestException(
                     "INVALID_BOOKING_DATE",
@@ -84,7 +97,6 @@ public class BookingService {
             );
         }
 
-        // Invalid range
         if (toDate.isBefore(fromDate)) {
             throw new BadRequestException(
                     "INVALID_DATE_RANGE",
@@ -92,87 +104,51 @@ public class BookingService {
             );
         }
 
-        List<BookingRes.BookingDate> bookedDates = new ArrayList<>();
-        List<BookingRes.SkippedDate> skippedDates = new ArrayList<>();
+        List<BookingRes.BookingDate> bookedDates =
+                new ArrayList<>();
 
+        List<BookingRes.SkippedDate> skippedDates =
+                new ArrayList<>();
+
+        /*
+         * Process every date independently.
+         */
         LocalDate currentDate = fromDate;
 
         while (!currentDate.isAfter(toDate)) {
 
-            // Desk already booked
-            boolean deskBooked =
-                    bookingRepo.existsByDesk_DeskIdAndBookingDateAndStatus(
-                            desk.getDeskId(),
-                            currentDate,
-                            BookingStatus.BOOKED
+            BookingDateResult result =
+                    bookingDateService.bookForDate(
+                            userId,
+                            request.deskId(),
+                            currentDate
                     );
 
-            if (deskBooked) {
-                skippedDates.add(
-                        new BookingRes.SkippedDate(
-                                currentDate,
-                                "Desk already booked"
-                        )
-                );
-
-                currentDate = currentDate.plusDays(1);
-                continue;
-            }
-
-            // User already has another booking on this date
-            boolean userAlreadyBooked =
-                    bookingRepo.existsByUser_UserIdAndBookingDateAndStatus(
-                            user.getUserId(),
-                            currentDate,
-                            BookingStatus.BOOKED
-                    );
-
-            if (userAlreadyBooked) {
-                skippedDates.add(
-                        new BookingRes.SkippedDate(
-                                currentDate,
-                                "You already have a booking on this date"
-                        )
-                );
-
-                currentDate = currentDate.plusDays(1);
-                continue;
-            }
-
-            Booking booking = Booking.builder()
-                    .user(user)
-                    .desk(desk)
-                    .bookingDate(currentDate)
-                    .status(BookingStatus.BOOKED)
-                    .build();
-
-            try {
-                Booking savedBooking = bookingRepo.saveAndFlush(booking);
+            if (result.booked()) {
 
                 bookedDates.add(
                         new BookingRes.BookingDate(
-                                savedBooking.getBookingId(),
-                                savedBooking.getBookingDate()
+                                result.bookingId(),
+                                currentDate
                         )
                 );
 
-            } catch (DataIntegrityViolationException e) {
+            } else {
 
-                // Another user booked the desk between our availability
-                // check and database insert.
                 skippedDates.add(
                         new BookingRes.SkippedDate(
                                 currentDate,
-                                "Desk was just booked by another user"
+                                result.reason()
                         )
                 );
             }
-
-            deskAvailabilityCache.evict(currentDate);
 
             currentDate = currentDate.plusDays(1);
         }
 
+        /*
+         * Nothing was booked.
+         */
         if (bookedDates.isEmpty()) {
 
             String reasons = skippedDates.stream()
@@ -182,7 +158,9 @@ public class BookingService {
                             (first, second) ->
                                     first + ", " + second
                     )
-                    .orElse("No dates were available for booking");
+                    .orElse(
+                            "No dates were available for booking"
+                    );
 
             throw new BookingConflictException(
                     "BOOKING_CONFLICTS",
@@ -190,6 +168,9 @@ public class BookingService {
             );
         }
 
+        /*
+         * At least one date was successfully booked.
+         */
         return BookingRes.builder()
                 .deskNumber(desk.getDeskNumber())
                 .status(BookingStatus.BOOKED)
@@ -237,57 +218,34 @@ public class BookingService {
     @Transactional
     public void cancelBooking(UUID bookingId) {
 
-        User currentUser = userRepo.findById(userContext.getUserId())
-                .orElseThrow(() ->
-                        new BadRequestException(
-                                "UNAUTHORIZED",
-                                userContext.getName()
-                                        + " is not authorized to cancel this booking."
-                        )
-                );
+        UUID userId = userContext.getUserId();
 
         Booking booking = bookingRepo.findByBookingId(bookingId)
-                .orElseThrow(() ->
-                        new BadRequestException(
-                                "BOOKING_NOT_FOUND",
-                                "No booking found with ID: " + bookingId
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "BOOKING_NOT_FOUND",
+                        bookingId.toString()
+                ));
 
-        if (booking.getStatus() != BookingStatus.BOOKED) {
-            throw new BadRequestException(
-                    "BOOKING_NOT_ACTIVE",
-                    "Booking is already cancelled or inactive"
+        if (!booking.getUser().getUserId().equals(userId) && !Objects.equals(userContext.getRole(), Role.ADMIN.name())) {
+            throw new BadRequestException("UNAUTHORIZED",
+                    "You are not authorized to cancel this booking"
             );
         }
 
-        boolean isAdmin =
-                currentUser.getRole() != null
-                        && currentUser.getRole().name().equals("ADMIN");
-
-        boolean isOwner =
-                booking.getUser()
-                        .getUserId()
-                        .equals(currentUser.getUserId());
-
-        if (!isAdmin && !isOwner) {
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new BadRequestException(
-                    "BOOKING_CANCEL_NOT_ALLOWED",
-                    "You are not allowed to cancel this booking"
+                    "BOOKING_ALREADY_CANCELLED",
+                    "Booking is already cancelled"
             );
         }
 
-        LocalDate bookingDate = booking.getBookingDate();
+        booking.setStatus(BookingStatus.CANCELLED);
 
-        /*
-         * Remove the row completely.
-         *
-         * This allows another user to book the same
-         * desk/date because of the unique constraint.
-         */
-        bookingRepo.delete(booking);
+        bookingRepo.save(booking);
 
-        deskAvailabilityCache.evict(bookingDate);
+        deskAvailabilityCache.evict(
+                booking.getBookingDate()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -296,7 +254,7 @@ public class BookingService {
         UUID userId = userContext.getUserId();
 
         List<Booking> bookings =
-                bookingRepo.findByUser_UserIdOrderByBookingDateAsc(userId);
+                bookingRepo.findByUser_UserIdAndStatusOrderByBookingDateAsc(userId, BookingStatus.BOOKED);
 
         return bookings.stream()
                 .map(booking ->

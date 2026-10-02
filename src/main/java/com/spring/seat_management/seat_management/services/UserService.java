@@ -21,6 +21,7 @@ import com.spring.seat_management.seat_management.repo.UserRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -61,6 +62,7 @@ public class UserService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public UserSignupRes addUser(UserSignupReq request) {
         if (userRepo.existsByEmail(request.email())) {
             throw new DuplicateResourceException(
@@ -127,6 +129,7 @@ public class UserService {
     }
 
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public List<AdminUserRes> getAllUsersForAdmin() {
 
         List<User> users = userRepo.findAll();

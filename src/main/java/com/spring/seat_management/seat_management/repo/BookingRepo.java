@@ -15,36 +15,43 @@ import java.util.UUID;
 @Repository
 public interface BookingRepo extends JpaRepository<Booking, UUID> {
 
-    Optional<Booking> findByDesk_DeskIdAndBookingDateAndStatus(
+    Optional<Booking>
+    findByDesk_DeskIdAndBookingDateAndStatus(
             UUID deskId,
             LocalDate bookingDate,
             BookingStatus status
     );
 
-    boolean existsByDesk_DeskIdAndBookingDateAndStatus(
+    boolean
+    existsByDesk_DeskIdAndBookingDateAndStatus(
             UUID deskId,
             LocalDate bookingDate,
             BookingStatus status
     );
 
-    boolean existsByUser_UserIdAndBookingDateAndStatus(
+    boolean
+    existsByUser_UserIdAndBookingDateAndStatus(
             UUID userId,
             LocalDate bookingDate,
             BookingStatus status
     );
 
-    List<Booking> findByDesk_DeskIdAndStatusOrderByBookingDateAsc(
+    List<Booking>
+    findByDesk_DeskIdAndStatusOrderByBookingDateAsc(
             UUID deskId,
             BookingStatus status
     );
 
-    List<Booking> findByUser_UserIdOrderByBookingDateAsc(
+    List<Booking>
+    findByUser_UserIdOrderByBookingDateAsc(
             UUID userId
     );
 
-    Optional<Booking> findByBookingId(UUID bookingId);
+    Optional<Booking>
+    findByBookingId(UUID bookingId);
 
-    List<Booking> findByUser_UserIdAndStatusOrderByBookingDateAsc(
+    List<Booking>
+    findByUser_UserIdAndStatusOrderByBookingDateAsc(
             UUID userId,
             BookingStatus status
     );

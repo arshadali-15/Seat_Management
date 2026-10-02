@@ -10,15 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "bookings",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_booking_desk_date",
-                        columnNames = {"desk_id", "booking_date"}
-                )
-        }
-)
+@Table(name = "bookings")
 @Getter
 @Setter
 @NoArgsConstructor
