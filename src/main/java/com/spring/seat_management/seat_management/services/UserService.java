@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,12 +44,26 @@ public class UserService {
 
     public UserLoginRes login(UserLoginReq request) {
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
-        );
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.email(),
+                            request.password()
+                    )
+            );
+        } catch (BadCredentialsException ex) {
+            throw new BadRequestException(
+                    "INVALID_CREDENTIALS",
+                    "Invalid email or password"
+            );
+        }
 
         User user = userRepo.findByEmail(request.email())
-                .orElseThrow(() -> new ResourceNotFoundException("User", request.email()));
+                .orElseThrow(() -> new BadRequestException(
+                        "INVALID_CREDENTIALS",
+                        "Invalid email or password"
+                ));
 
         String token = jwtUtil.generateAccessToken(
                 user.getEmail(), user.getUserId(), user.getRole().name(), user.getName());
