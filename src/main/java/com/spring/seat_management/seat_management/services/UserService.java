@@ -43,8 +43,6 @@ public class UserService {
     private final UserContext userContext;
 
     public UserLoginRes login(UserLoginReq request) {
-
-
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(

@@ -37,7 +37,6 @@ public class UserController {
 
     @PostMapping("/addUser")
     @PreAuthorize("hasRole('ADMIN')")
-    @Transactional
     public ResponseEntity<UserSignupRes> addUser(@RequestBody @Valid UserSignupReq request) {
         UserSignupRes response = userService.addUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
