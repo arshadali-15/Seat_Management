@@ -95,7 +95,7 @@ public class BookingDateService {
             /*
              * Availability changed for this date.
              */
-            deskAvailabilityCache.evict(bookingDate);
+            deskAvailabilityCache.evict(desk.getSection(), bookingDate);
 
             return BookingDateResult.booked(
                     savedBooking.getBookingId()

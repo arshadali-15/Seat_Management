@@ -244,6 +244,7 @@ public class BookingService {
         bookingRepo.save(booking);
 
         deskAvailabilityCache.evict(
+                booking.getDesk().getSection(),
                 booking.getBookingDate()
         );
     }

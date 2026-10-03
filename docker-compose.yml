@@ -6,7 +6,6 @@ services:
       POSTGRES_DB: seatmanagement
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      SPRING_PROFILES_ACTIVE: local
     ports:
       - "5432:5432"
     volumes:

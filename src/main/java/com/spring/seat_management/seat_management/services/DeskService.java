@@ -26,12 +26,12 @@ public class DeskService {
     @Transactional(readOnly = true)
     public List<DeskAvailabilityRes> getAllDesks(LocalDate date) {
 
-        Optional<List<DeskAvailabilityRes>> cachedDesks =
-                deskAvailabilityCache.get(date);
+//        Optional<List<DeskAvailabilityRes>> cachedDesks =
+//                deskAvailabilityCache.get(Section.CSM,date);
 
-        if (cachedDesks.isPresent()) {
-            return cachedDesks.get();
-        }
+//        if (cachedDesks.isPresent()) {
+//            return cachedDesks.get();
+//        }
 
         List<DeskAvailabilityRes> desks = deskRepo
                 .findDesksWithAvailability(date)
@@ -46,18 +46,21 @@ public class DeskService {
                 ))
                 .toList();
 
-        deskAvailabilityCache.put(date, desks);
+//        deskAvailabilityCache.put(date, desks);
 
         return desks;
     }
 
     @Transactional(readOnly = true)
-    public List<DeskAvailabilityRes> getDesksBySection(
-            Section section,
-            LocalDate date
-    ) {
+    public List<DeskAvailabilityRes> getDesksBySection(Section section, LocalDate date) {
+        Optional<List<DeskAvailabilityRes>> cachedDesks =
+                deskAvailabilityCache.get(section, date);
 
-        return deskRepo
+        if (cachedDesks.isPresent()) {
+            return cachedDesks.get();
+        }
+
+        List<DeskAvailabilityRes> desks = deskRepo
                 .findDesksWithAvailabilityBySection(
                         section.name(),
                         date
@@ -72,6 +75,8 @@ public class DeskService {
                         projection.getBookingDate()
                 ))
                 .toList();
+        deskAvailabilityCache.put(section, date, desks);
+        return desks;
     }
 
     @Transactional
