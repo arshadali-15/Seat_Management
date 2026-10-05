@@ -41,7 +41,7 @@ public class BookingService {
     private final DeskAvailabilityCache deskAvailabilityCache;
     private final BookingDateService bookingDateService;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public BookingRes bookDesk(BookingReq request) {
 
         UUID userId = userContext.getUserId();
