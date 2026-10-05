@@ -1,24 +1,25 @@
 services:
   postgres:
-    image: postgres:17
-    container_name: seat-management-db
+    image: postgres
+    container_name: seat-management-db_local
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-seatmanagement}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: seatmanagement
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      SPRING_PROFILES_ACTIVE: local
+    ports:
+      - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - seat-management-network
+      - postgres-data:/var/lib/postgresql
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: seat-management-redis
+    container_name: redis_local
+    ports:
+      - "6379:6379"
     volumes:
       - redis-data:/data
-    networks:
-      - seat-management-network
     command: redis-server --appendonly yes
     restart: unless-stopped
     healthcheck:
@@ -27,51 +28,6 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    image: arshadali15/seat-management-backend:1.0.2
-    container_name: seat-management-backend
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-seatmanagement}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-
-      SPRING_PROFILES_ACTIVE: docker
-    networks:
-      - seat-management-network
-    depends_on:
-      - postgres
-      - redis
-    restart: unless-stopped
-
-  frontend:
-    image: arshadali15/seat-management-ui:1.0.2
-    container_name: seat-management-ui
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-
 volumes:
   postgres-data:
   redis-data:
-
-networks:
-  seat-management-network:
-
-    # .\mvnw.cmd clean package -DskipTests
-    # docker build -t seat-management-backend:1.0.1 .
-    # docker tag seat-management-backend:1.0.1 arshadali15/seat-management-backend:1.0.1
-    # docker login
-    # docker push arshadali15/seat-management-backend:1.0.1
-
-    # docker build -t seat-management-ui:1.0.1 .
-    # docker tag seat-management-ui:1.0.1 arshadali15/seat-management-ui:1.0.1
-    # docker push arshadali15/seat-management-ui:1.0.1
-
-
-    # docker buildx build --platform linux/amd64,linux/arm64 -t arshadali15/seat-management-ui:1.0.2 --push .
-    # docker buildx build --platform linux/amd64,linux/arm64 -t arshadali15/seat-management-backend:1.0.2 --push .
