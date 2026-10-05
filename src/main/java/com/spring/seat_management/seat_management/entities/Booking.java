@@ -30,11 +30,8 @@ public class Booking extends BaseEntity {
     @JoinColumn(name = "desk_id", nullable = false)
     private Desk desk;
 
-    @Column(nullable = false)
-    private LocalDate bookingFromDate;
-
-    @Column(nullable = false)
-    private LocalDate bookingToDate;
+    @Column(name = "booking_date", nullable = false)
+    private LocalDate bookingDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -2,12 +2,10 @@ package com.spring.seat_management.seat_management.services;
 
 import com.spring.seat_management.seat_management.common.cache.DeskAvailabilityCache;
 import com.spring.seat_management.seat_management.common.enums.DeskStatus;
-import com.spring.seat_management.seat_management.common.enums.DeskType;
 import com.spring.seat_management.seat_management.common.enums.Section;
 import com.spring.seat_management.seat_management.common.exceptions.ResourceNotFoundException;
 import com.spring.seat_management.seat_management.dto.response.DeskAvailabilityRes;
 import com.spring.seat_management.seat_management.entities.Desk;
-import com.spring.seat_management.seat_management.repo.DeskReleaseRepo;
 import com.spring.seat_management.seat_management.repo.DeskRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,13 +23,15 @@ public class DeskService {
     private final DeskRepo deskRepo;
     private final DeskAvailabilityCache deskAvailabilityCache;
 
+    @Transactional(readOnly = true)
     public List<DeskAvailabilityRes> getAllDesks(LocalDate date) {
 
-        Optional<List<DeskAvailabilityRes>> cachedDesks = deskAvailabilityCache.get(date);
+//        Optional<List<DeskAvailabilityRes>> cachedDesks =
+//                deskAvailabilityCache.get(Section.CSM,date);
 
-        if (cachedDesks.isPresent()) {
-            return cachedDesks.get();
-        }
+//        if (cachedDesks.isPresent()) {
+//            return cachedDesks.get();
+//        }
 
         List<DeskAvailabilityRes> desks = deskRepo
                 .findDesksWithAvailability(date)
@@ -42,32 +42,29 @@ public class DeskService {
                         p.getIsActive(),
                         p.getStatus(),
                         p.getBookedBy(),
-                        p.getBookingFromDate(),
-                        p.getBookingToDate()
+                        p.getBookingDate()
                 ))
                 .toList();
 
-        deskAvailabilityCache.put(date, desks);
+//        deskAvailabilityCache.put(date, desks);
 
         return desks;
     }
 
-    public void updateStatus(UUID deskId, DeskStatus status) {
-        Desk desk = deskRepo.findById(deskId)
-                .orElseThrow(() -> new ResourceNotFoundException("DESK_NOT_FOUND", "Desk not found"));
-        desk.setStatus(status);
-        deskRepo.save(desk);
-        deskAvailabilityCache.evictAll();
-    }
-
     @Transactional(readOnly = true)
-    public List<DeskAvailabilityRes> getDesksBySection(
-            Section section,
-            LocalDate date
-    ) {
+    public List<DeskAvailabilityRes> getDesksBySection(Section section, LocalDate date) {
+        Optional<List<DeskAvailabilityRes>> cachedDesks =
+                deskAvailabilityCache.get(section, date);
 
-        return deskRepo
-                .findDesksWithAvailabilityBySection(section.name(), date)
+        if (cachedDesks.isPresent()) {
+            return cachedDesks.get();
+        }
+
+        List<DeskAvailabilityRes> desks = deskRepo
+                .findDesksWithAvailabilityBySection(
+                        section.name(),
+                        date
+                )
                 .stream()
                 .map(projection -> new DeskAvailabilityRes(
                         projection.getDeskId(),
@@ -75,18 +72,44 @@ public class DeskService {
                         projection.getIsActive(),
                         projection.getStatus(),
                         projection.getBookedBy(),
-                        projection.getBookingFromDate(),
-                        projection.getBookingToDate()
+                        projection.getBookingDate()
                 ))
                 .toList();
+        deskAvailabilityCache.put(section, date, desks);
+        return desks;
     }
 
-    public void setActiveStatus(UUID deskId, boolean isActive) {
+    @Transactional
+    public void updateStatus(UUID deskId, DeskStatus status) {
+
         Desk desk = deskRepo.findById(deskId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "DESK_NOT_FOUND", "Desk not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "DESK_NOT_FOUND",
+                                "Desk not found"
+                        )
+                );
+
+        desk.setStatus(status);
+        deskRepo.save(desk);
+
+        deskAvailabilityCache.evictAll();
+    }
+
+    @Transactional
+    public void setActiveStatus(UUID deskId, boolean isActive) {
+
+        Desk desk = deskRepo.findById(deskId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "DESK_NOT_FOUND",
+                                "Desk not found"
+                        )
+                );
+
         desk.setIsActive(isActive);
         deskRepo.save(desk);
+
         deskAvailabilityCache.evictAll();
     }
 }

@@ -1,7 +1,6 @@
 package com.spring.seat_management.seat_management.repo;
 
 import com.spring.seat_management.seat_management.common.enums.BookingStatus;
-import com.spring.seat_management.seat_management.dto.response.BookingRes;
 import com.spring.seat_management.seat_management.entities.Booking;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,7 +8,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,63 +15,44 @@ import java.util.UUID;
 @Repository
 public interface BookingRepo extends JpaRepository<Booking, UUID> {
 
-    @Query("""
-            SELECT b
-            FROM Booking b
-            WHERE b.desk.deskId = :deskId
-              AND b.status = :status
-              AND b.bookingFromDate <= :date
-              AND b.bookingToDate >= :date
-            """)
-    Optional<Booking> findBookingOnDate(
-            @Param("deskId") UUID deskId,
-            @Param("date") LocalDate date,
-            @Param("status") BookingStatus status
+    Optional<Booking>
+    findByDesk_DeskIdAndBookingDateAndStatus(
+            UUID deskId,
+            LocalDate bookingDate,
+            BookingStatus status
     );
 
-    @Query("""
-            SELECT COUNT(b) > 0
-            FROM Booking b
-            WHERE b.user.userId = :userId
-              AND b.status = :status
-              AND b.bookingFromDate <= :date
-              AND b.bookingToDate >= :date
-            """)
-    boolean existsUserBookingOnDate(
-            @Param("userId") UUID userId,
-            @Param("date") LocalDate date,
-            @Param("status") BookingStatus status
+    boolean
+    existsByDesk_DeskIdAndBookingDateAndStatus(
+            UUID deskId,
+            LocalDate bookingDate,
+            BookingStatus status
     );
 
-    @Query("""
-            SELECT b
-            FROM Booking b
-            WHERE b.desk.deskId = :deskId
-              AND b.status = :status
-            ORDER BY b.bookingFromDate ASC
-            """)
-    List<Booking> findByDeskIdAndStatus(
-            @Param("deskId") UUID deskId,
-            @Param("status") BookingStatus status
+    boolean
+    existsByUser_UserIdAndBookingDateAndStatus(
+            UUID userId,
+            LocalDate bookingDate,
+            BookingStatus status
     );
 
-    List<Booking> findByUser_UserId(@Param("userId") UUID userId);
+    List<Booking>
+    findByDesk_DeskIdAndStatusOrderByBookingDateAsc(
+            UUID deskId,
+            BookingStatus status
+    );
 
-    Optional<Booking> findByBookingId(UUID bookingId);
+    List<Booking>
+    findByUser_UserIdOrderByBookingDateAsc(
+            UUID userId
+    );
 
-    @Query("""
-            SELECT b
-            FROM Booking b
-            WHERE b.desk.deskId = :deskId
-              AND b.user.userId = :userId
-              AND b.status = :status
-              AND b.bookingFromDate <= :date
-              AND b.bookingToDate >= :date
-            """)
-    Optional<Booking> findUserBookingOnDate(
-            @Param("deskId") UUID deskId,
-            @Param("userId") UUID userId,
-            @Param("date") LocalDate date,
-            @Param("status") BookingStatus status
+    Optional<Booking>
+    findByBookingId(UUID bookingId);
+
+    List<Booking>
+    findByUser_UserIdAndStatusOrderByBookingDateAsc(
+            UUID userId,
+            BookingStatus status
     );
 }

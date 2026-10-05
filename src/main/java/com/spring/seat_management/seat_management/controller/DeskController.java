@@ -2,18 +2,13 @@ package com.spring.seat_management.seat_management.controller;
 
 import com.spring.seat_management.seat_management.common.enums.DeskStatus;
 import com.spring.seat_management.seat_management.common.enums.Section;
-import com.spring.seat_management.seat_management.dto.response.BookingRes;
-import com.spring.seat_management.seat_management.dto.response.DeskAvailabilityProjection;
 import com.spring.seat_management.seat_management.dto.response.DeskAvailabilityRes;
-import com.spring.seat_management.seat_management.entities.Desk;
-import com.spring.seat_management.seat_management.services.BookingService;
 import com.spring.seat_management.seat_management.services.DeskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -61,7 +56,7 @@ public class DeskController {
     }
 
     // ✅ Admin — toggle maintenance (permanent deactivation)
-    @PatchMapping("/{deskId}/active")
+    @PatchMapping("/status/{deskId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> setActiveStatus(
             @PathVariable UUID deskId,
