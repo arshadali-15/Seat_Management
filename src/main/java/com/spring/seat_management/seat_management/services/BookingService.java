@@ -19,7 +19,6 @@ import com.spring.seat_management.seat_management.repo.BookingRepo;
 import com.spring.seat_management.seat_management.repo.DeskRepo;
 import com.spring.seat_management.seat_management.repo.UserRepo;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -164,7 +163,7 @@ public class BookingService {
 
             throw new BookingConflictException(
                     "BOOKING_CONFLICTS",
-                    "No dates were booked. " + reasons
+                    "You have an existing booking that is currently active."
             );
         }
 
@@ -201,6 +200,7 @@ public class BookingService {
                                 .bookedBy(
                                         booking.getUser().getName()
                                 )
+                                .bookedById( booking.getUser().getSlsId())
                                 .bookings(
                                         List.of(
                                                 new BookingRes.BookingDate(
