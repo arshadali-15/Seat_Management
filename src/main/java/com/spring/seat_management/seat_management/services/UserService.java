@@ -18,7 +18,7 @@ import com.spring.seat_management.seat_management.entities.User;
 import com.spring.seat_management.seat_management.mapper.UserMapper;
 import com.spring.seat_management.seat_management.repo.BookingRepo;
 import com.spring.seat_management.seat_management.repo.UserRepo;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,148 +34,132 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class UserService {
-    private final UserRepo userRepo;
-    private final UserMapper userMapper;
-    private final BookingRepo bookingRepo;
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
-    private final PasswordEncoder passwordEncoder;
-    private final UserContext userContext;
+        private final UserRepo userRepo;
+        private final UserMapper userMapper;
+        private final BookingRepo bookingRepo;
+        private final AuthenticationManager authenticationManager;
+        private final JwtUtil jwtUtil;
+        private final PasswordEncoder passwordEncoder;
+        private final UserContext userContext;
 
-    public UserLoginRes login(UserLoginReq request) {
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.email(),
-                            request.password()
-                    )
-            );
-        } catch (BadCredentialsException ex) {
-            throw new BadRequestException(
-                    "INVALID_CREDENTIALS",
-                    "Invalid email or password"
-            );
+        @Transactional(readOnly = true)
+        public UserLoginRes login(UserLoginReq request) {
+                try {
+                        authenticationManager.authenticate(
+                                        new UsernamePasswordAuthenticationToken(
+                                                        request.email().toLowerCase(),
+                                                        request.password()));
+                } catch (BadCredentialsException ex) {
+                        throw new BadRequestException(
+                                        "INVALID_CREDENTIALS",
+                                        "Invalid email or password");
+                }
+
+                User user = userRepo.findByEmail(request.email().toLowerCase())
+                                .orElseThrow(() -> new BadRequestException(
+                                                "INVALID_CREDENTIALS",
+                                                "Invalid email or password"));
+
+                String token = jwtUtil.generateAccessToken(
+                                user.getEmail(), user.getUserId(), user.getRole().name(), user.getName());
+
+                return new UserLoginRes(token, new UserProfileRes(
+                                user.getUserId(),
+                                user.getName(),
+                                user.getEmail(),
+                                user.getRole().name(),
+                                user.getSlsId()));
         }
 
-        User user = userRepo.findByEmail(request.email())
-                .orElseThrow(() -> new BadRequestException(
-                        "INVALID_CREDENTIALS",
-                        "Invalid email or password"
-                ));
+        @Transactional
+        @PreAuthorize("hasRole('ADMIN')")
+        public UserSignupRes addUser(UserSignupReq request) {
+                if (userRepo.existsByEmail(request.email())) {
+                        throw new DuplicateResourceException(
+                                        "EMAIL_EXISTS",
+                                        "Email already exists with email: " + request.email());
+                }
 
-        String token = jwtUtil.generateAccessToken(
-                user.getEmail(), user.getUserId(), user.getRole().name(), user.getName());
+                if (userRepo.existsBySlsId(request.SLSID())) {
+                        throw new DuplicateResourceException(
+                                        "SLSID_EXISTS",
+                                        "SLS ID already exists: " + request.SLSID());
+                }
 
-        return new UserLoginRes(token, new UserProfileRes(
-                user.getUserId(),
-                user.getName(),
-                user.getEmail(),
-                user.getRole().name()
-        ));
-    }
+                User appUser = User.builder()
+                                .name(request.name())
+                                .email(request.email())
+                                .slsId(request.SLSID())
+                                .passwordHash(passwordEncoder.encode(request.password()))
+                                .role(Role.EMPLOYEE)
+                                .build();
 
-    @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
-    public UserSignupRes addUser(UserSignupReq request) {
-        if (userRepo.existsByEmail(request.email())) {
-            throw new DuplicateResourceException(
-                    "EMAIL_EXISTS",
-                    "Email already exists with email: " + request.email()
-            );
+                userRepo.save(appUser);
+
+                return userMapper.toSignUpResponse(appUser);
         }
 
-        if (userRepo.existsBySlsId(request.SLSID())) {
-            throw new DuplicateResourceException(
-                    "SLSID_EXISTS",
-                    "SLS ID already exists: " + request.SLSID()
-            );
+        @Transactional
+        public void resetPassword(ResetPasswordReq request) {
+
+                User user = userRepo.findById(userContext.getUserId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "USER_NOT_FOUND",
+                                                userContext.getUserId().toString()));
+
+                if (!passwordEncoder.matches(
+                                request.currentPassword(),
+                                user.getPasswordHash())) {
+
+                        throw new BadRequestException(
+                                        "INVALID_CURRENT_PASSWORD",
+                                        "Current password is incorrect");
+                }
+
+                if (passwordEncoder.matches(
+                                request.newPassword(),
+                                user.getPasswordHash())) {
+
+                        throw new BadRequestException(
+                                        "SAME_PASSWORD",
+                                        "New password must be different from current password");
+                }
+
+                user.setPasswordHash(
+                                passwordEncoder.encode(request.newPassword()));
+
+                userRepo.save(user);
         }
 
-        User appUser = User.builder()
-                .name(request.name())
-                .email(request.email())
-                .slsId(request.SLSID())
-                .passwordHash(passwordEncoder.encode(request.password()))
-                .role(Role.EMPLOYEE)
-                .build();
+        @Transactional
+        @PreAuthorize("hasRole('ADMIN')")
+        public List<AdminUserRes> getAllUsersForAdmin() {
 
-        userRepo.save(appUser);
+                List<User> users = userRepo.findAll();
 
-        return userMapper.toSignUpResponse(appUser);
-    }
+                return users.stream()
+                                .map(user -> {
 
-    @Transactional
-    public void resetPassword(ResetPasswordReq request) {
+                                        List<AdminUserRes.AdminBookingRes> bookings = bookingRepo
+                                                        .findByUser_UserIdAndStatusOrderByBookingDateAsc(
+                                                                        user.getUserId(),
+                                                                        BookingStatus.BOOKED)
+                                                        .stream()
+                                                        .map(booking -> new AdminUserRes.AdminBookingRes(
+                                                                        booking.getBookingId(),
+                                                                        booking.getDesk().getDeskNumber(),
+                                                                        booking.getBookingDate(),
+                                                                        booking.getStatus()))
+                                                        .toList();
 
-        User user = userRepo.findById(userContext.getUserId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "USER_NOT_FOUND",
-                                userContext.getUserId().toString()
-                        ));
-
-        if (!passwordEncoder.matches(
-                request.currentPassword(),
-                user.getPasswordHash())) {
-
-            throw new BadRequestException(
-                    "INVALID_CURRENT_PASSWORD",
-                    "Current password is incorrect"
-            );
+                                        return new AdminUserRes(
+                                                        user.getUserId(),
+                                                        user.getName(),
+                                                        user.getEmail(),
+                                                        user.getSlsId(),
+                                                        user.getRole().name(),
+                                                        bookings);
+                                })
+                                .toList();
         }
-
-        if (passwordEncoder.matches(
-                request.newPassword(),
-                user.getPasswordHash())) {
-
-            throw new BadRequestException(
-                    "SAME_PASSWORD",
-                    "New password must be different from current password"
-            );
-        }
-
-        user.setPasswordHash(
-                passwordEncoder.encode(request.newPassword())
-        );
-
-        userRepo.save(user);
-    }
-
-    @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
-    public List<AdminUserRes> getAllUsersForAdmin() {
-
-        List<User> users = userRepo.findAll();
-
-        return users.stream()
-                .map(user -> {
-
-                    List<AdminUserRes.AdminBookingRes> bookings =
-                            bookingRepo
-                                    .findByUser_UserIdAndStatusOrderByBookingDateAsc(
-                                            user.getUserId(),
-                                            BookingStatus.BOOKED
-                                    )
-                                    .stream()
-                                    .map(booking ->
-                                            new AdminUserRes.AdminBookingRes(
-                                                    booking.getBookingId(),
-                                                    booking.getDesk().getDeskNumber(),
-                                                    booking.getBookingDate(),
-                                                    booking.getStatus()
-                                            )
-                                    )
-                                    .toList();
-
-                    return new AdminUserRes(
-                            user.getUserId(),
-                            user.getName(),
-                            user.getEmail(),
-                            user.getSlsId(),
-                            user.getRole().name(),
-                            bookings
-                    );
-                })
-                .toList();
-    }
 }
