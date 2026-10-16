@@ -14,6 +14,7 @@ public record BookingRes(
         BookingStatus status,
         LocalDateTime createdAt,
         String bookedBy,
+        String bookedById,
         List<BookingDate> bookings,
         List<SkippedDate> skippedDates
 ) {
